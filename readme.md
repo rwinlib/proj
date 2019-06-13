@@ -1,9 +1,7 @@
 # PROJ 6.1.0
 
-Built with [rtools-packages](https://github.com/r-windows/rtools-packages/blob/master/mingw-w64-proj/PKGBUILD) and 
-[rtools-backports](https://github.com/r-windows/rtools-backports/blob/master/mingw-w64-proj/PKGBUILD).
-
-The dependency `libsqlite3.a` is not ABI sensitive so we use the same build for both toolchains. Example linkage:
+Built with and [rtools-backports](https://github.com/r-windows/rtools-backports/blob/master/mingw-w64-proj/PKGBUILD).
+Both `libproj` and `libsqlite3` are not ABI sensitive so we use the same build for both toolchains. Example linkage:
 
 
 ```
