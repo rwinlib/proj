@@ -81,7 +81,8 @@ using CRSNNPtr = util::nn<CRSPtr>;
  *
  * \remark Implements CRS from \ref ISO_19111_2019
  */
-class PROJ_GCC_DLL CRS : public common::ObjectUsage {
+class PROJ_GCC_DLL CRS : public common::ObjectUsage,
+                         public io::IJSONExportable {
   public:
     //! @cond Doxygen_Suppress
     PROJ_DLL ~CRS() override;
@@ -105,6 +106,13 @@ class PROJ_GCC_DLL CRS : public common::ObjectUsage {
 
     PROJ_DLL std::list<CRSNNPtr>
     getNonDeprecated(const io::DatabaseContextNNPtr &dbContext) const;
+
+    PROJ_DLL CRSNNPtr
+    promoteTo3D(const std::string &newName,
+                const io::DatabaseContextPtr &dbContext) const;
+
+    PROJ_DLL CRSNNPtr demoteTo2D(const std::string &newName,
+                                 const io::DatabaseContextPtr &dbContext) const;
 
     PROJ_PRIVATE :
         //! @cond Doxygen_Suppress
@@ -181,7 +189,8 @@ class PROJ_GCC_DLL SingleCRS : public CRS {
     PROJ_INTERNAL bool
     baseIsEquivalentTo(const util::IComparable *other,
                        util::IComparable::Criterion criterion =
-                           util::IComparable::Criterion::STRICT) const;
+                           util::IComparable::Criterion::STRICT,
+                       const io::DatabaseContextPtr &dbContext = nullptr) const;
 
   private:
     PROJ_OPAQUE_PRIVATE_DATA
@@ -273,10 +282,14 @@ class PROJ_GCC_DLL GeodeticCRS : virtual public SingleCRS,
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     //! @endcond
 
@@ -337,6 +350,10 @@ class PROJ_GCC_DLL GeographicCRS : public GeodeticCRS {
            const datum::DatumEnsemblePtr &datumEnsemble,
            const cs::EllipsoidalCSNNPtr &cs);
 
+    PROJ_DLL GeographicCRSNNPtr
+    demoteTo2D(const std::string &newName,
+               const io::DatabaseContextPtr &dbContext) const;
+
     PROJ_DLL static const GeographicCRSNNPtr EPSG_4267; // NAD27
     PROJ_DLL static const GeographicCRSNNPtr EPSG_4269; // NAD83
     PROJ_DLL static const GeographicCRSNNPtr EPSG_4326; // WGS 84 2D
@@ -353,13 +370,17 @@ class PROJ_GCC_DLL GeographicCRS : public GeodeticCRS {
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
 
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
     PROJ_DLL bool
     is2DPartOf3D(util::nn<const GeographicCRS *> other) PROJ_PURE_DECL;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     //! @endcond
 
@@ -440,10 +461,17 @@ class PROJ_GCC_DLL VerticalCRS : virtual public SingleCRS,
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     //! @endcond
 
@@ -452,9 +480,6 @@ class PROJ_GCC_DLL VerticalCRS : virtual public SingleCRS,
                               const datum::DatumEnsemblePtr &datumEnsembleIn,
                               const cs::VerticalCSNNPtr &csIn);
     PROJ_INTERNAL VerticalCRS(const VerticalCRS &other);
-
-    PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
-        const override; // throw(FormattingException)
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
@@ -493,8 +518,15 @@ class PROJ_GCC_DLL DerivedCRS : virtual public SingleCRS {
 
     PROJ_PRIVATE :
         //! @cond Doxygen_Suppress
+
+        // Use this method with extreme care ! It should never be used
+        // to recreate a new Derived/ProjectedCRS !
         PROJ_INTERNAL const operation::ConversionNNPtr &
         derivingConversionRef() PROJ_PURE_DECL;
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
     //! @endcond
 
   protected:
@@ -510,10 +542,13 @@ class PROJ_GCC_DLL DerivedCRS : virtual public SingleCRS {
         io::WKTFormatter *formatter, const std::string &keyword,
         const std::string &baseKeyword) const; // throw(FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
+
+    PROJ_INTERNAL virtual const char *className() const = 0;
 
   private:
     PROJ_OPAQUE_PRIVATE_DATA
@@ -564,6 +599,10 @@ class PROJ_GCC_DLL ProjectedCRS final : public DerivedCRS,
     PROJ_DLL std::list<std::pair<ProjectedCRSNNPtr, int>>
     identify(const io::AuthorityFactoryPtr &authorityFactory) const;
 
+    PROJ_DLL ProjectedCRSNNPtr
+    demoteTo2D(const std::string &newName,
+               const io::DatabaseContextPtr &dbContext) const;
+
     PROJ_PRIVATE :
         //! @cond Doxygen_Suppress
         PROJ_INTERNAL void
@@ -572,6 +611,9 @@ class PROJ_GCC_DLL ProjectedCRS final : public DerivedCRS,
 
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
 
     PROJ_FOR_TEST ProjectedCRSNNPtr alterParametersLinearUnit(
         const common::UnitOfMeasure &unit, bool convertToNewUnit) const;
@@ -588,13 +630,18 @@ class PROJ_GCC_DLL ProjectedCRS final : public DerivedCRS,
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
+
+    PROJ_INTERNAL const char *className() const override {
+        return "ProjectedCRS";
+    }
 
     INLINED_MAKE_SHARED
 
@@ -636,7 +683,11 @@ class PROJ_GCC_DLL TemporalCRS : virtual public SingleCRS {
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL TemporalCRS(const datum::TemporalDatumNNPtr &datumIn,
@@ -647,10 +698,11 @@ class PROJ_GCC_DLL TemporalCRS : virtual public SingleCRS {
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
   private:
     PROJ_OPAQUE_PRIVATE_DATA
@@ -693,7 +745,11 @@ class PROJ_GCC_DLL EngineeringCRS : virtual public SingleCRS {
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL EngineeringCRS(const datum::EngineeringDatumNNPtr &datumIn,
@@ -702,10 +758,11 @@ class PROJ_GCC_DLL EngineeringCRS : virtual public SingleCRS {
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     INLINED_MAKE_SHARED
 
@@ -749,7 +806,11 @@ class PROJ_GCC_DLL ParametricCRS : virtual public SingleCRS {
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL ParametricCRS(const datum::ParametricDatumNNPtr &datumIn,
@@ -758,10 +819,11 @@ class PROJ_GCC_DLL ParametricCRS : virtual public SingleCRS {
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     INLINED_MAKE_SHARED
 
@@ -821,12 +883,16 @@ class PROJ_GCC_DLL CompoundCRS final : public CRS,
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
 
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
@@ -906,10 +972,14 @@ class PROJ_GCC_DLL BoundCRS final : public CRS,
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL BoundCRSNNPtr shallowCloneAsBoundCRS() const;
     PROJ_INTERNAL bool isTOWGS84Compatible() const;
@@ -965,7 +1035,13 @@ class PROJ_GCC_DLL DerivedGeodeticCRS final : public GeodeticCRS,
     //! @cond Doxygen_Suppress
     void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void
+    _exportToJSON(io::JSONFormatter *formatter) const override {
+        return DerivedCRS::_exportToJSON(formatter);
+    }
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL
@@ -980,10 +1056,11 @@ class PROJ_GCC_DLL DerivedGeodeticCRS final : public GeodeticCRS,
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
@@ -991,6 +1068,10 @@ class PROJ_GCC_DLL DerivedGeodeticCRS final : public GeodeticCRS,
     // cppcheck-suppress functionStatic
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
+
+    PROJ_INTERNAL const char *className() const override {
+        return "DerivedGeodeticCRS";
+    }
 
     INLINED_MAKE_SHARED
 
@@ -1034,7 +1115,13 @@ class PROJ_GCC_DLL DerivedGeographicCRS final : public GeographicCRS,
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void
+    _exportToJSON(io::JSONFormatter *formatter) const override {
+        return DerivedCRS::_exportToJSON(formatter);
+    }
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL
@@ -1045,13 +1132,18 @@ class PROJ_GCC_DLL DerivedGeographicCRS final : public GeographicCRS,
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
+
+    PROJ_INTERNAL const char *className() const override {
+        return "DerivedGeographicCRS";
+    }
 
     // cppcheck-suppress functionStatic
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
@@ -1109,10 +1201,15 @@ class PROJ_GCC_DLL DerivedProjectedCRS final : public DerivedCRS {
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
+
+    PROJ_INTERNAL const char *className() const override {
+        return "DerivedProjectedCRS";
+    }
 
     INLINED_MAKE_SHARED
 
@@ -1153,7 +1250,13 @@ class PROJ_GCC_DLL DerivedVerticalCRS final : public VerticalCRS,
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void
+    _exportToJSON(io::JSONFormatter *formatter) const override {
+        return DerivedCRS::_exportToJSON(formatter);
+    }
+
+    //! @endcond
 
   protected:
     PROJ_INTERNAL
@@ -1164,13 +1267,18 @@ class PROJ_GCC_DLL DerivedVerticalCRS final : public VerticalCRS,
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL std::list<std::pair<CRSNNPtr, int>>
     _identify(const io::AuthorityFactoryPtr &authorityFactory) const override;
+
+    PROJ_INTERNAL const char *className() const override {
+        return "DerivedVerticalCRS";
+    }
 
     // cppcheck-suppress functionStatic
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
@@ -1234,7 +1342,12 @@ class PROJ_GCC_DLL DerivedCRSTemplate final : public DerivedCRSTraits::BaseType,
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void
+    _exportToJSON(io::JSONFormatter *formatter) const override {
+        return DerivedCRS::_exportToJSON(formatter);
+    }
+    //! @endcond
 
   protected:
     PROJ_INTERNAL
@@ -1245,10 +1358,13 @@ class PROJ_GCC_DLL DerivedCRSTemplate final : public DerivedCRSTraits::BaseType,
 
     PROJ_INTERNAL CRSNNPtr _shallowClone() const override;
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
+
+    PROJ_INTERNAL const char *className() const override;
 
     INLINED_MAKE_SHARED
 
@@ -1270,7 +1386,7 @@ struct PROJ_GCC_DLL DerivedEngineeringCRSTraits {
     inline static const std::string &CRSName();
     inline static const std::string &WKTKeyword();
     inline static const std::string &WKTBaseKeyword();
-    static const bool wkt2_2018_only = true;
+    static const bool wkt2_2019_only = true;
 };
 //! @endcond
 
@@ -1308,7 +1424,7 @@ struct PROJ_GCC_DLL DerivedParametricCRSTraits {
     inline static const std::string &CRSName();
     inline static const std::string &WKTKeyword();
     inline static const std::string &WKTBaseKeyword();
-    static const bool wkt2_2018_only = false;
+    static const bool wkt2_2019_only = false;
 };
 //! @endcond
 
@@ -1345,7 +1461,7 @@ struct PROJ_GCC_DLL DerivedTemporalCRSTraits {
     inline static const std::string &CRSName();
     inline static const std::string &WKTKeyword();
     inline static const std::string &WKTBaseKeyword();
-    static const bool wkt2_2018_only = false;
+    static const bool wkt2_2019_only = false;
 };
 //! @endcond
 

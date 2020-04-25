@@ -61,7 +61,8 @@ namespace datum {
  *
  * \remark Implements Datum from \ref ISO_19111_2019
  */
-class PROJ_GCC_DLL Datum : public common::ObjectUsage {
+class PROJ_GCC_DLL Datum : public common::ObjectUsage,
+                           public io::IJSONExportable {
   public:
     //! @cond Doxygen_Suppress
     PROJ_DLL ~Datum() override;
@@ -71,13 +72,16 @@ class PROJ_GCC_DLL Datum : public common::ObjectUsage {
     PROJ_DLL const util::optional<common::DateTime> &publicationDate() const;
     PROJ_DLL const common::IdentifiedObjectPtr &conventionalRS() const;
 
+    //! @cond Doxygen_Suppress
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
+    //! @endcond
+
   protected:
     PROJ_INTERNAL Datum();
-
-    PROJ_INTERNAL bool
-    __isEquivalentTo(const util::IComparable *other,
-                     util::IComparable::Criterion criterion =
-                         util::IComparable::Criterion::STRICT) const;
 
 #ifdef DOXYGEN_ENABLED
     std::string *anchorDefinition_;
@@ -87,6 +91,10 @@ class PROJ_GCC_DLL Datum : public common::ObjectUsage {
 
   protected:
     PROJ_INTERNAL void setAnchor(const util::optional<std::string> &anchor);
+
+    PROJ_INTERNAL void
+    setProperties(const util::PropertyMap
+                      &properties); // throw(InvalidValueTypeException)
 
   private:
     PROJ_OPAQUE_PRIVATE_DATA
@@ -117,7 +125,8 @@ using DatumEnsembleNNPtr = util::nn<DatumEnsemblePtr>;
  *
  * \remark Implements DatumEnsemble from \ref ISO_19111_2019
  */
-class PROJ_GCC_DLL DatumEnsemble final : public common::IdentifiedObject {
+class PROJ_GCC_DLL DatumEnsemble final : public common::IdentifiedObject,
+                                         public io::IJSONExportable {
   public:
     //! @cond Doxygen_Suppress
     PROJ_DLL ~DatumEnsemble() override;
@@ -134,6 +143,9 @@ class PROJ_GCC_DLL DatumEnsemble final : public common::IdentifiedObject {
 
     //! @cond Doxygen_Suppress
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
+        const override; // throw(io::FormattingException)
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
         const override; // throw(io::FormattingException)
                         //! @endcond
 
@@ -171,7 +183,8 @@ using PrimeMeridianNNPtr = util::nn<PrimeMeridianPtr>;
  * \remark Implements PrimeMeridian from \ref ISO_19111_2019
  */
 class PROJ_GCC_DLL PrimeMeridian final : public common::IdentifiedObject,
-                                         public io::IPROJStringExportable {
+                                         public io::IPROJStringExportable,
+                                         public io::IJSONExportable {
   public:
     //! @cond Doxygen_Suppress
     PROJ_DLL ~PrimeMeridian() override;
@@ -198,10 +211,14 @@ class PROJ_GCC_DLL PrimeMeridian final : public common::IdentifiedObject,
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(io::FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL static std::string
     getPROJStringWellKnownName(const common::Angle &angle);
@@ -243,7 +260,8 @@ using EllipsoidNNPtr = util::nn<EllipsoidPtr>;
  * \remark Implements Ellipsoid from \ref ISO_19111_2019
  */
 class PROJ_GCC_DLL Ellipsoid final : public common::IdentifiedObject,
-                                     public io::IPROJStringExportable {
+                                     public io::IPROJStringExportable,
+                                     public io::IJSONExportable {
   public:
     //! @cond Doxygen_Suppress
     PROJ_DLL ~Ellipsoid() override;
@@ -300,10 +318,14 @@ class PROJ_GCC_DLL Ellipsoid final : public common::IdentifiedObject,
         _exportToWKT(io::WKTFormatter *formatter)
             const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(io::FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL void _exportToPROJString(io::PROJStringFormatter *formatter)
         const override; // throw(FormattingException)
@@ -399,10 +421,14 @@ class PROJ_GCC_DLL GeodeticReferenceFrame : public Datum {
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
     //! @endcond
 
   protected:
@@ -419,6 +445,10 @@ class PROJ_GCC_DLL GeodeticReferenceFrame : public Datum {
     PROJ_INTERNAL static const GeodeticReferenceFrameNNPtr createEPSG_6267();
     PROJ_INTERNAL static const GeodeticReferenceFrameNNPtr createEPSG_6269();
     PROJ_INTERNAL static const GeodeticReferenceFrameNNPtr createEPSG_6326();
+
+    bool hasEquivalentNameToUsingAlias(
+        const IdentifiedObject *other,
+        const io::DatabaseContextPtr &dbContext) const override;
 
   private:
     PROJ_OPAQUE_PRIVATE_DATA
@@ -464,10 +494,11 @@ class PROJ_GCC_DLL DynamicGeodeticReferenceFrame final
            const util::optional<std::string> &deformationModelNameIn);
 
     //! @cond Doxygen_Suppress
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
@@ -547,14 +578,19 @@ class PROJ_GCC_DLL VerticalReferenceFrame : public Datum {
                util::optional<RealizationMethod>());
 
     //! @cond Doxygen_Suppress
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
-                        //! @endcond
+
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    //! @endcond
 
   protected:
 #ifdef DOXYGEN_ENABLED
@@ -606,10 +642,11 @@ class PROJ_GCC_DLL DynamicVerticalReferenceFrame final
            const util::optional<std::string> &deformationModelNameIn);
 
     //! @cond Doxygen_Suppress
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
 
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
@@ -668,10 +705,14 @@ class PROJ_GCC_DLL TemporalDatum final : public Datum {
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
     //! @endcond
 
   protected:
@@ -716,10 +757,14 @@ class PROJ_GCC_DLL EngineeringDatum final : public Datum {
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
     //! @endcond
 
   protected:
@@ -760,10 +805,14 @@ class PROJ_GCC_DLL ParametricDatum final : public Datum {
     PROJ_INTERNAL void _exportToWKT(io::WKTFormatter *formatter)
         const override; // throw(io::FormattingException)
 
-    PROJ_INTERNAL bool
-    _isEquivalentTo(const util::IComparable *other,
-                    util::IComparable::Criterion criterion =
-                        util::IComparable::Criterion::STRICT) const override;
+    PROJ_INTERNAL void _exportToJSON(io::JSONFormatter *formatter)
+        const override; // throw(FormattingException)
+
+    PROJ_INTERNAL bool _isEquivalentTo(
+        const util::IComparable *other,
+        util::IComparable::Criterion criterion =
+            util::IComparable::Criterion::STRICT,
+        const io::DatabaseContextPtr &dbContext = nullptr) const override;
     //! @endcond
 
   protected:
